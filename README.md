@@ -1,48 +1,45 @@
-# Real-Time Chat Moderation System (Use Case 4)
+Real-Time Chat Moderation
+SWE015 · Use Case 4
 
-An end-to-end real-time chat moderation application built for the **SWE015 – Introduction to Large Language Models** course. This system flags offensive and toxic messages on a CPU-only server within a strict latency budget (<50ms).
+This Gradio app moderates Turkish chat messages. It labels each message as CLEAN or OFFENSIVE, shows the selected model's confidence, and masks flagged messages. The side panel lets you switch models and records the inference time of each message. BERTurk INT8 is the default model.
+1. Install
+Install Git and Python 3.11 or 3.12. Run the commands for your operating system.
+Windows (PowerShell)
+git clone https://github.com/EfeKu7/chat-moderation_app.git
+cd chat-moderation_app
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+If you installed Python 3.11, use py -3.11 to create the environment. Replace python in the following sections with .\.venv\Scripts\python.exe in PowerShell.
+Linux
+git clone https://github.com/EfeKu7/chat-moderation_app.git
+cd chat-moderation_app
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt
+These commands install CPU-only PyTorch. For GPU training, install the PyTorch 2.8.0 wheel for your CUDA setup in place of the CPU wheel. The app and benchmark use the CPU.
+2. Train the models
+For a shorter first run, train on a stratified sample of 1,024 messages.
+python train.py --train-limit 1024 --epochs 1
+For full training, run python train.py. Full BERTurk fine-tuning can take several hours on CPU. The script downloads OffensEval-TR 2020 and the pretrained BERTurk checkpoint, then saves the four trained models under artifacts/. If you already have a trusted copy of the model files, place the artifacts/ folder alongside app.py and proceed to the next step.
+3. Run the application
+python app.py
+Open the local URL printed in the terminal. Type a Turkish chat message and click Gönder. The side panel displays the model, classification and processing time for each message.
+4. Measure the models
+python benchmark.py
+The benchmark evaluates all four models on the same 3,528 official OffensEval-TR test messages. Full training starts with 31,756 official training messages and excludes exact matches with test messages after normalization. The benchmark reports Macro-F1, saved model size in MB, CPU details, and mean and p95 latency over 200 single-message requests per model after warm-up. It checks the INT8 model against a 50 ms mean inference budget and reports the edit-distance baseline's Macro-F1 separately.
 
----
+Find the results in artifacts/benchmark.json. Report the training size and CPU used with your results.
+How it works
+Technique	What the project does
+Classical NLP	Normalizes leetspeak, repeated letters and Turkish case. Uses an edit-distance lexicon as a separate rule baseline. The trained classical model uses character TF-IDF and logistic regression.
+Neural network	Trains Word2Vec on the training messages. The mean token vectors feed a feedforward network trained with SGD and backpropagation.
+Transformer	Fine-tunes BERTurk for binary classification. The tokenizer truncates input to 64 tokens.
+Quantization	Applies dynamic INT8 quantization to BERTurk's linear layers. Embeddings and other layers retain floating-point precision.
+The latency log includes text normalization, feature extraction or tokenization, inference and label selection. Timing starts after model loading and ends before the interface updates.
 
-## 🚀 Project Overview & Model Ladder
-This project implements the required four-model ladder evaluated on the same held-out test dataset:
-1. **Classical Baseline (Area B - Classical NLP):** Regex-based normalization (handling leetspeak, repeated characters, and Turkish/English characters), lexicon rule matching, and TF-IDF statistical baseline.
-2. **Neural Network (Area A - Deep Learning):** Custom Feedforward Neural Network (FNN) trained from scratch using Word2Vec embeddings with SGD and backpropagation.
-3. **Transformer (Area C - Transformers):** Fine-tuned BERTurk / Multilingual encoder classification head for deep semantic toxicity analysis.
-4. **Quantized Transformer (Area D - Efficient Models):** Dynamic INT8 quantized transformer model optimized for CPU execution to meet the sub-50ms latency budget.
-
----
-
-## 🏛️ Architecture & Data Flow
-1. **User Input:** The user enters a live chat message via the interactive Gradio web interface.
-2. **Preprocessing:** Text is normalized through regex rules to handle noise and character manipulation.
-3. **Inference Pipeline:** The message is evaluated concurrently across all 4 models in the model ladder.
-4. **Post-processing & Masking:** If the active quantized model flags the text as `OFFENSIVE`, the message is automatically filtered and masked as `[MASKED - Toxic Content Detected]`.
-
----
-
-## 📊 Performance & Metrics Summary
-| Model Layer | Technique Area | Task Metric (Macro-F1) | Model Size (MB) | Latency (CPU, avg) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Classical Baseline** | Area B (Classical NLP) | ~0.68 | ~2 MB | ~0.1 ms |
-| **Neural Network** | Area A (Deep Learning) | ~0.74 | ~15 MB | ~4.5 ms |
-| **Transformer (BERTurk)** | Area C (Transformers) | ~0.92 | ~440 MB | ~35 ms |
-| **Quantized Transformer** | Area D (Efficient Models) | ~0.91 | ~110 MB | ~12 ms |
-
----
-
-## 🛠️ Tech Stack & Requirements
-- **Python 3.8+**
-- **Gradio** (Interactive Web UI)
-- **NumPy** (Numerical computations)
-
----
-
-## ⚙️ Setup and Run Instructions
-
-Follow these steps to set up and run the project locally:
-
-1. **Clone the repository:**
-   ```bash
-   git clone <your-repository-url>
-   cd chat-moderation
+The training data comes from Turkish social media. Gaming slang and quoted insults can lead to classification errors. Confidence is the selected model's class probability.
+Sources
+- OffensEval-TR 2020 dataset release
+- BERTurk pretrained checkpoint
