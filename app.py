@@ -15,7 +15,7 @@ def create_app(artifacts):
         try:
             return Moderator(name, artifacts)
         except FileNotFoundError as exc:
-            raise gr.Error("Model dosyaları eksik. Önce README'deki eğitim adımını çalıştırın.") from exc
+            raise gr.Error("Model files are missing. Follow the training steps in the README first.") from exc
 
     def moderate(message, model_name, messages, timings):
         message = (message or "").strip()
@@ -26,7 +26,7 @@ def create_app(artifacts):
         start = perf_counter()
         label, confidence = model.classify(message)
         latency = (perf_counter() - start) * 1000
-        visible_message = "[Mesaj maskelendi]" if label == "OFFENSIVE" else message
+        visible_message = "[Message masked]" if label == "OFFENSIVE" else message
         messages = messages + [
             {"role": "assistant", "content": f"{label} · {confidence:.1%}\n\n{visible_message}"}
         ]
@@ -37,18 +37,18 @@ def create_app(artifacts):
         gr.Markdown("# Real-Time Chat Moderation")
         with gr.Row():
             with gr.Column(scale=3):
-                chat = gr.Chatbot(label="Sohbet", type="messages", height=380, render_markdown=False)
+                chat = gr.Chatbot(label="Chat", type="messages", height=380, render_markdown=False)
                 with gr.Row():
-                    message = gr.Textbox(label="Mesaj", placeholder="Türkçe bir mesaj yaz",
+                    message = gr.Textbox(label="Message", placeholder="Type a message in Turkish",
                                          max_lines=3, scale=4)
-                    send = gr.Button("Gönder", variant="primary", scale=1)
+                    send = gr.Button("Send", variant="primary", scale=1)
             with gr.Column(scale=2):
-                selected = gr.Dropdown(choices=MODELS, value=MODELS[-1], label="Etkin model")
+                selected = gr.Dropdown(choices=MODELS, value=MODELS[-1], label="Active model")
                 history = gr.Dataframe(
-                    headers=["Mesaj", "Model", "Etiket", "Gecikme (ms)"],
+                    headers=["Message", "Model", "Label", "Latency (ms)"],
                     datatype=["number", "str", "str", "number"], value=[], type="array", interactive=False,
                 )
-                clear = gr.Button("Sohbeti temizle")
+                clear = gr.Button("Clear chat")
         messages_state = gr.State([])
         timings_state = gr.State([])
         outputs = [message, chat, history, messages_state, timings_state]

@@ -1,4 +1,68 @@
-embeddings = Word2Vec([tokens(text) for text in texts], vector_size=dimensions,
+import argparse
+import csv
+import io
+import json
+import random
+from pathlib import Path
+from urllib.request import urlopen
+from zipfile import ZipFile
+
+import joblib
+import numpy as np
+import torch
+from gensim.models import Word2Vec
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from torch import nn
+from torch.utils.data import DataLoader, TensorDataset
+from transformers import AutoTokenizer, BertForSequenceClassification
+
+from moderation import (
+    FILES,
+    LABELS,
+    MODELS,
+    FeedForward,
+    average_vectors,
+    normalize,
+    quantize,
+    tokens,
+)
+
+DATA_URL = "https://coltekin.github.io/offensive-turkish/offenseval2020-turkish.zip"
+BASE_MODEL = "dbmdz/bert-base-turkish-cased"
+BASE_REVISION = "b6e1de16c983e0f2c70664591ea3f22810072608"
+SEED = 42
+MAX_LENGTH = 64
+
+
+def load_data(path):
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with urlopen(DATA_URL, timeout=60) as response:
+            archive_bytes = response.read()
+        path.write_bytes(archive_bytes)
+
+    with ZipFile(path) as archive:
+        def rows(suffix, delimiter):
+            member = next(name for name in archive.namelist() if name.endswith("/" + suffix))
+            text = archive.read(member).decode("utf-8-sig")
+            return list(csv.reader(io.StringIO(text), delimiter=delimiter, quoting=csv.QUOTE_NONE))
+
+        training = rows("offenseval-tr-training-v1.tsv", "\t")[1:]
+        testing = rows("offenseval-tr-testset-v1.tsv", "\t")[1:]
+        test_labels = dict(rows("offenseval-tr-labela-v1.tsv", ","))
+    labels = {"NOT": 0, "OFF": 1}
+    return (
+        ([text for _, text, _ in training], [labels[label] for _, _, label in training]),
+        ([text for _, text in testing], [labels[test_labels[key]] for key, _ in testing]),
+    )
+
+
+def fit_fnn(texts, labels, path):
+    dimensions = 64
+    embeddings = Word2Vec([tokens(text) for text in texts], vector_size=dimensions,
                           min_count=2, workers=1, seed=SEED, epochs=10).wv
     vectors = {word: embeddings[word] for word in embeddings.index_to_key}
     features = average_vectors(texts, vectors, dimensions)
