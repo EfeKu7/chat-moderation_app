@@ -1,0 +1,56 @@
+{
+  "training": {
+    "dataset": "https://coltekin.github.io/offensive-turkish/offenseval2020-turkish.zip",
+    "base_model": "dbmdz/bert-base-turkish-cased",
+    "base_revision": "b6e1de16c983e0f2c70664591ea3f22810072608",
+    "seed": 42,
+    "official_train_size": 31756,
+    "train_size": 3999,
+    "removed_test_overlaps": 1,
+    "test_size": 3528,
+    "bert_epochs": 3,
+    "bert_max_tokens": 64,
+    "bert_batch_size": 16
+  },
+  "cpu": "Intel Core i7-10875H",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "torch": "2.8.0+cpu",
+  "quantization_backend": "x86",
+  "torch_threads": 4,
+  "test_messages": 3528,
+  "timed_requests_per_model": 200,
+  "mean_cpu_budget_ms": 50,
+  "lexicon_macro_f1": 0.4926560317718525,
+  "models": [
+    {
+      "model": "TF-IDF",
+      "macro_f1": 0.6909214205074973,
+      "size_mb": 1.274851,
+      "mean_latency_ms": 1.1432705008337507,
+      "p95_latency_ms": 1.7359150049742311
+    },
+    {
+      "model": "Word2Vec + FNN",
+      "macro_f1": 0.44353312302839115,
+      "size_mb": 1.623824,
+      "mean_latency_ms": 0.1931645005242899,
+      "p95_latency_ms": 0.2991750065120868
+    },
+    {
+      "model": "BERTurk FP32",
+      "macro_f1": 0.7707979626485568,
+      "size_mb": 443.563081,
+      "mean_latency_ms": 37.09233149995271,
+      "p95_latency_ms": 58.73440000577829
+    },
+    {
+      "model": "BERTurk INT8",
+      "macro_f1": 0.7805746377174949,
+      "size_mb": 187.043081,
+      "mean_latency_ms": 21.92142150037398,
+      "p95_latency_ms": 34.43791000463534
+    }
+  ],
+  "int8_mean_meets_budget": true,
+  "int8_p95_meets_budget": true
+}

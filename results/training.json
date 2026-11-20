@@ -1,0 +1,13 @@
+{
+  "dataset": "https://coltekin.github.io/offensive-turkish/offenseval2020-turkish.zip",
+  "base_model": "dbmdz/bert-base-turkish-cased",
+  "base_revision": "b6e1de16c983e0f2c70664591ea3f22810072608",
+  "seed": 42,
+  "official_train_size": 31756,
+  "train_size": 3999,
+  "removed_test_overlaps": 1,
+  "test_size": 3528,
+  "bert_epochs": 3,
+  "bert_max_tokens": 64,
+  "bert_batch_size": 16
+}

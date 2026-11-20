@@ -57,6 +57,7 @@ def main():
     parser.add_argument("--artifacts", type=Path, default=Path("artifacts"))
     parser.add_argument("--runs", type=int, default=200)
     parser.add_argument("--threads", type=int, default=4)
+    parser.add_argument("--cpu-name", help="CPU model to record in the report")
     args = parser.parse_args()
     if args.runs < 100 or args.threads < 1:
         parser.error("Use at least 100 requests and one CPU thread")
@@ -66,7 +67,7 @@ def main():
                                                   replace=args.runs > len(texts))
     report = {
         "training": json.loads((args.artifacts / "training.json").read_text()),
-        "cpu": cpu_name(),
+        "cpu": args.cpu_name or cpu_name(),
         "platform": platform.platform(),
         "torch": torch.__version__,
         "quantization_backend": torch.backends.quantized.engine,
@@ -79,12 +80,17 @@ def main():
         ),
         "models": [],
     }
+    print(json.dumps({"model": "Lexicon + edit distance",
+                      "macro_f1": report["lexicon_macro_f1"]}), flush=True)
     for model_name in MODELS:
         metrics = benchmark(model_name, args.artifacts, texts, labels, indices)
         print(json.dumps(metrics), flush=True)
         report["models"].append(metrics)
     report["int8_mean_meets_budget"] = (
         report["models"][-1]["mean_latency_ms"] < CPU_BUDGET_MS
+    )
+    report["int8_p95_meets_budget"] = (
+        report["models"][-1]["p95_latency_ms"] < CPU_BUDGET_MS
     )
     path = args.artifacts / "benchmark.json"
     path.write_text(json.dumps(report, indent=2) + "\n")

@@ -123,10 +123,11 @@ def main():
     parser.add_argument("--data", type=Path, default=Path("data/offenseval.zip"))
     parser.add_argument("--artifacts", type=Path, default=Path("artifacts"))
     parser.add_argument("--base-model", default=BASE_MODEL)
-    parser.add_argument("--epochs", type=int, default=2)
+    parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--threads", type=int, default=4)
-    parser.add_argument("--train-limit", type=int, help="Stratified subset for development runs")
+    parser.add_argument("--train-limit", type=int, default=4000,
+                        help="Stratified subset of the official training split")
     args = parser.parse_args()
     if min(args.epochs, args.batch_size, args.threads) < 1:
         parser.error("epochs, batch size and threads must be positive")
